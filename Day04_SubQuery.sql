@@ -192,13 +192,49 @@ from employee
     and emp_name not in '하이유';
     
 -- 기술지원부이면서 급여가 200만원인 직원의 상원명, 부서코드, 급여, 부서의 지역명 출력
-select *from employee;
-select * from location;
-select * from department;
-
 select 
     emp_name, dept_code, salary, local_name
 from employee inner join department on(dept_id = dept_code)
     inner join location on(location_id = local_code)
     where (salary,dept_code) in(select salary, dept_code from employee where salary = 2000000 and dept_title = '기술지원부');
-    
+
+-- 생일이 8/8인 사원들과 같은 부서코드, 직급코드를 가진 사원들의 사원명, 생일('0808'), 부서코드, 부서명 출력
+-- 다중행 다중열 서브 쿼리
+select 
+    emp_name, substr(emp_no,3,4), dept_code, dept_title
+from employee inner join department on(dept_code = dept_id)
+    where (dept_code, job_code) in (select dept_code, job_code from employee where substr(emp_no,3,4)= '0808')
+    and substr(emp_no,3,4) not in '0808';
+================================================================================
+-- Join -> group by
+-- 부서코드, 부서명, 부서별 평균급여, 부서별 인원수 출력
+select
+    nvl(dept_code,'없음')"부서코드", 
+    nvl(dept_title,'없음')"부서명",
+    floor(avg(salary)) "부서별 평균급여",
+    count(*) "부서별 인원수"
+from employee left outer join department on(dept_code = dept_id)
+    group by dept_code, dept_title
+    having count(*) >= 3
+    order by 1;
+================================================================================
+/*
+    인라인 뷰(inlien-view)
+    : from 절에서 사용하는 서브쿼리
+    -- 인라인뷰를 사용할때는 인라인뷰에서 조회해온 데이터에 대해서만 메인쿼리문에서 데이터를 가져올 수 있음
+*/
+select 
+    emp_name, salary
+from employee;
+
+select 
+    * -- from 절에 column만 가져올수 있음
+from(select emp_name, salary from employee);
+================================================================================
+/*
+    스칼라 서브쿼리 : select 절에서 사용하는 서브쿼리 -> 하나의 컬럼만 가져올 수 있음
+*/
+select
+    emp_name
+    ,(select dept_title from department where dept_code = dept_id)"dept_title"
+from employee;
