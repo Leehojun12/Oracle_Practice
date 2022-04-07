@@ -24,7 +24,7 @@ create table temp(
     - not null : 해당 컬럼에 null 값이 들어갈 수 없음 -> null 값 허용 X
     - unique : 중복된 값을 허용 X
     - primary key(기본키) : null 값 허용 X 중복값 허용 X -> 컬럼 중 고유 식별자로 사용
-    - foreign key(외해키) : 두 테이블의 간의 관계를 설정하고 -> A테이블(id,pw,...) B테이블(member_id,count..)
+    - foreign key(외래키) : 두 테이블의 간의 관계를 설정하고 -> A테이블(id,pw,...) B테이블(member_id,count..)
         B테이블의 member_id 컬럼에 들어갈 수 있는 값이 A테이블의 id에 있는 데이터여야하는 경우
     - check : 해당 컬럼에 저장 가능한 값의 범위 조건을 지정해서 설정한 값만 허용
 */
@@ -101,3 +101,162 @@ create table user_cons(
     gender varchar2(10)
 );
 insert into user_cons values(3, '11235','sam','남');
+
+-- primary key에 대해 하나의 컬럼이 아니라 여러개의 컬럼에 대한 복합키 형태로 적용을 시키고 싶으면 컬럼레벨에서는 불가
+-- 복합키 -> 컬럼 두개 이상을 묶어서 설정하는 키
+
+create table user_cons( -- no,id를 하나로 묶어서 primary key
+    no number , 
+    id varchar2(100) ,
+    pw varchar2(100),
+    gender varchar2(10),
+    primary key(no, id)
+);
+
+select * from user_cons;
+insert into user_cons values(1, '11234','tom','남');
+insert into user_cons values(1, '1234','tom','여');
+================================================================================
+/*
+    foreign key ( 외래키 ) : 참조무결성을 지키고 싶을때, 참조된 다른 테이블이 제공하는 값만 사용할 수 있도록 제약하고 싶을 때.
+    => 참조하는 컬럼과 참조되는 컬럼을 통해 두 테이블간에 관계가 생성이 됨.
+    => 참조하는 컬럼이 참조되는 컬럼에 있는 값과 일치하거나, null 값만 가질수 없음
+    ** 참조하는 컬럼 : 참조 대상을 참조하는 테이블의 컬럼 (B_대여_테이블)
+    ** 참조되는 컬럼 : 참조 대상이 되는 테이블 컬럼 (A_학생_테이블)    
+*/
+-- 학생 테이블 / 대여 테이블
+create table student(
+    id varchar2(100) primary key,
+    name varchar2(100) not null,
+    age number not null
+);
+insert into student values('001','tom',20);
+insert into student values('002','salley',30);
+insert into student values('003','chloe',25);
+select * from student;
+
+drop table borrow;
+-- 도서 대여 테이블
+create table borrow(-- 테이블 레벨
+    book_id varchar2(100) primary key,
+    std_id varchar2(100),
+    rent_date date,
+    foreign key(std_id) references student (id) -- foreign key (참조하는 컬럼) references 참조대상테이블명 (참조대상 컬럼명)
+);
+
+create table borrow(-- 컬럼 레벨
+    book_id varchar2(100) primary key,
+    std_id varchar2(100) references student(id), -- 컬럼명 자료형 references 참조대상 테이블명(참조대상 컬럼명)
+    rent_date date
+);
+
+select * from borrow;
+insert into borrow values('500','002',sysdate);
+
+-- 참조되고 있는 id -> 002 -> 삭제
+-- delete (삭제할 테이블명) where (조건);
+-- 참조되고 있는 컬럼의 데이터를 가지고 있는 자식 컬럼이 있다면 원본 테이블의 데이터 삭제X - 데이터의 무결성 침해, 일관성 X
+delete student where id = '003';
+
+/*
+    삭제 옵션
+    -> 부모 테이블에서 데이터 삭제 할때 자식 테이블에 있는 데이터를 어떤 방식으로 처리할지 -> 제약조건을 걸때 삭제 옵션도 함께 걸어 줌.
+    -> 기본 삭제 옵션은 on delete no action -> 자신을 참조하는 데이터가 있다면 삭제 할 수 없다.
+*/
+-- on delete set null
+-- 만약 참조하고 있던 부모 데이터가 삭제되면 자식 데이터를 null 값으로 설정
+create table borrow(
+    book_id varchar2(100) primary key,
+    std_id varchar2(100) references student(id) on delete set null, 
+    rent_date date
+);
+-- on delete cascade
+-- 부모 데이터가 삭제되면 해당 데이터를 참조하고 있는 자식 데이터 역시도 함께 삭제
+-- 예시) 1번 게시글 작성 -> 1번 글번호를 참조하는 댓글 3개 달렸음. 1번 게시글 삭제시 3개 댓글 다 삭제
+create table borrow(
+    book_id varchar2(100) primary key,
+    std_id varchar2(100) references student(id) on delete cascade, 
+    rent_date date
+);
+insert into borrow values('501','003',sysdate);
+================================================================================
+/*
+    check
+    : 해당 컬럼에 입력되거나, 수정되어 들어오는 값을 체크해 설정한 값만 들어올 수 있게끔 제한
+    
+*/
+drop table user_cons;
+create table user_cons(
+    no number , 
+    id varchar2(100) ,
+    pw varchar2(100),
+    gender varchar2(10) check(gender in ('남','여')),
+    primary key(no, id)
+);
+select *from user_cons;
+insert into user_cons values(1,'ab123','sdfsdf','남');
+================================================================================
+-- default
+
+create table temp(
+    date_one date,
+    date_two date default sysdate
+);
+insert into temp values(sysdate); -- 컬럼의 총 개수와 일치하지 않는 데이터를 넣고 있어 에러 발생
+insert into temp values(sysdate, default);
+select * from temp; -- default라는 키워드를 이용해 값을 넣으면 테이블 생성시 default로 잡아 준 값이 들어간다.
+================================================================================
+/*
+    drop : 객체를 삭제하기 위해 사용하는 구문
+*/
+drop table temp;
+================================================================================
+/*
+    alter : 테이블에 정의된 내용을 수정하고자 할 때 사용하는 데이터 정의어
+    -> 컬럼 추가/삭제, 제약조건 추가/삭제, 컬럼의 자료형 변경, default값 변경
+    -> 테이블명/컬럼명/제약조건의 이름 변경
+*/
+create table member(
+    no number primary key,
+    id varchar2(100),
+    pw varchar2(100)
+);
+select * from member;
+-- 테이블의 정보를 보기 위해서는 desc
+desc member;
+
+-- 이미 존재하는 member 테이블에 새로운 컬럼 추가(name)
+alter table member add (name varchar2(100));
+
+-- 새로운 컬럼 추가(age) + default
+alter table member add (age number default 0);
+
+-- 제약 조건 추가 -> id 컬럼에 unique 제약조건 추가
+alter table member add constraint id_unq unique(id);
+select constraint_name, constraint_type from user_constraints where table_name = 'MEMBER';
+
+-- 제약 조건 추가 -> pw 컬럼에 not null 제약조건 추가 -> add로 접근 X
+-- modify
+alter table member add constraint pw_nn not null(pw); -- X
+alter table member modify pw constraint pw_nn not null;
+
+-- 컬럼명 수정 -> pw 컬럼을 password라고 변경
+alter table member rename column idea to id;
+
+-- 컬럼의 데이터 타입 수정 - name varchar2(100) -> char(100)
+alter table member modify name char(100);
+
+-- 컬럼 삭제 -> age 컬럼 삭제
+alter table member drop column age;
+
+-- 제약조건 삭제 -> password 컬럼의 제약조건 삭제
+-- 제약조건의 이름을 먼저 알고 있어야댐
+select constraint_name from user_constraints where table_name = 'MEMBER';
+alter table member drop constraint pw_nn;
+ 
+-- 제약조건 수정
+alter table member rename constraint SYS_C007116 to no_pk;
+ 
+-- 테이블명 변경
+alter table member rename to tbl_member;
+select * from tbl_member;
